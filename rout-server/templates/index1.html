@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<!-- This is the HEAD of the HTML file, things in here do not appear on the page. It is
+		 used for settings, such as the language and page title, as well as loading CSS styles and
+		 scripts that you want to load before the content of the page. -->
+	<meta charset="utf-8">
+	<title>Route planning and the Web</title>
+
+	<!-- This is loading the stylesheet for the Leaflet map from their website. -->
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+	<!-- This is where we set the style for the different elements in the page's content -->
+	<style>
+	
+		html,
+		body {
+			height: 100%;
+			padding: 0px;
+			margin: 0px;
+		}
+
+		.box {
+			height: 100%;
+			width: 100%;
+			display: flex;
+		}
+
+		p {
+			margin-top: 15px;
+		}
+
+		.left-box {
+			width: 300px;
+			/* height: 100%; */
+			padding: 10px;
+		}
+
+		.right-box {
+			height: 100%;
+			flex: 1;
+		}
+
+		#mapDiv {
+			height: 100%;
+			width: 100%;
+		}
+
+		.note {
+			font-weight: bold;
+			margin-top: 30px;
+		}
+
+		.input-box {
+			margin-top: 10px;
+		}
+
+		.input-box span {
+			display: inline-block;
+			width: 50px;
+		}
+
+		.btn {
+			margin-top: 20px;
+			margin-right: 20px;
+		}
+	</style>
+	<script src=" https://unpkg.com/leaflet@1.7.1/dist/leaflet.js">
+	</script>
+	<script src="http://libs.baidu.com/jquery/2.1.4/jquery.min.js"></script>
+
+</head>
+
+<body>
+	<div class="box">
+		<div class="left-box">
+			<p class="note">
+				Click the map to select the start point and end point
+			</p>
+			<div class="input-box">
+				<span>start</span>
+				<input type="text" id="start" name="start">
+			</div>
+			<div class="input-box">
+				<span>end</span>
+				<input type="text" id="end" name="end">
+			</div>
+
+			<p class="note" style="margin-top: 30px;">
+				Route planning preference
+			</p>
+			<div>
+				<input type="radio" name="type" value="1" checked="checked">Speed priority<br>
+				<input type="radio" name="type" value="2">Avoid traffic jam first
+			</div>
+			<button class="btn" type="button" onclick="getRoute()">show Route</button>
+			<button class="btn" type="button" onclick="clearLayer()">clear</button>
+		</div>
+		<div class="right-box">
+			<div id="mapDiv"></div>
+		</div>
+	</div>
+
+	<script>
+		var count = 0
+		let mapData = []
+		
+		// this is a variable that holds the reference to the Leaflet map object and the centre of the map
+		var map = L.map("mapDiv").setView([54.60091883289433, -3.1377296536811636], 15);
+		
+		// this adds the basemap tiles to the map
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+		}).addTo(map);
+		
+		// add listener for click event on the map
+		map.on("click", ({
+			latlng
+		}) => {
+		
+			// Record clicks times
+			count += 1
+			
+			// Determine if it is the first click
+			if (count == 1) {
+			
+				// Read the latitude and longitude coordinates of the starting point
+				$("#start").val([latlng.lng, latlng.lat])
+				let marker = L.marker([latlng.lat, latlng.lng
+				]).addTo(map);
+				mapData.push(marker)
+				
+			// Determine if it is the second click
+			} else if (count == 2) {
+			
+				// Read the latitude and longitude coordinates of the starting point
+				$("#end").val([latlng.lng, latlng.lat])
+				let marker = L.marker([latlng.lat, latlng.lng
+				]).addTo(map);
+				mapData.push(marker)
+			}
+			console.log("Coordinates：", latlng);
+		})
+
+		// Define get Route function
+		function getRoute() {
+		
+			// load the start,end,and type
+			let start = $("#start").val()
+			let end = $("#end").val()
+			let type = $("input[name='type']:checked").val();
+			if (!start && !end) {
+				alert("start point or end point in not null")
+				
+				// return the start,end,type
+				return
+			}
+			console.log(start, end, type)
+			$.ajax({
+				url: "http://127.0.0.1:5000/showRoueData",
+				data: {
+					start: start,
+					end: end,
+					type: type
+				},
+				// load the route line and add the route in the map
+				success: function (res) {
+					if (res.success) {
+						if (res.data) {
+							let line = L.polyline(res.data).addTo(map);
+							mapData.push(line)
+						}
+					} else {
+						if (res.message)
+							alert(res.message)
+					}
+				}
+			})
+		}
+		// define clearLayer function to clear the mapdata
+		function clearLayer(){
+			if(mapData.length>0){
+				mapData.map(item=>{
+					map.removeLayer(item)
+				})
+			}
+		}
+	</script>
+</body>
+
+</html>
